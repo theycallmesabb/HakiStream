@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>My Videos</h2>
+<div id="list"></div>
+
+<video id="player" controls width="500"></video>
+
+<script>
+fetch("/videos")
+  .then(res => res.json())
+  .then(data => {
+    const list = document.getElementById("list")
+
+    data.forEach(video => {
+      const btn = document.createElement("button")
+      btn.innerText = video.name
+
+      btn.onclick = () => {
+        document.getElementById("player").src = video.url
+      }
+
+      list.appendChild(btn)
+    })
+  })
+</script>
+
+</body>
+</html>
