@@ -1,77 +1,65 @@
-HakiStream
+#  HakiStream
 
-HakiStream is a scalable backend video streaming system built with Go that supports efficient video upload, storage, and HTTP range-based streaming. It is designed with production-level architecture using modern backend practices like JWT authentication, Redis token management, and Cloudflare R2 object storage.
+HakiStream is a high-performance, scalable backend video streaming system built with **Go**. It supports efficient video uploading, cloud object storage, and chunked **HTTP range-based streaming**. Designed with production-level architecture, it integrates robust security practices including JWT authentication, Redis-backed session/token management, and Cloudflare R2 storage.
 
-🚀 Features
-📤 Video upload with Cloudflare R2 object storage
-🎥 HTTP Range-based streaming for smooth playback and seeking
-📃 Video listing API
-👤 User authentication system (Register & Login)
-🔐 JWT-based authentication with Redis token session handling
-🧠 Secure middleware-protected routes
-🗄️ MongoDB integration for users and video metadata
-⚡ Optimized for large video file handling and scalable delivery
+---
 
-🧰 Tech Stack
-Backend: Go (Golang), Gin
-Database: MongoDB
-Cache / Session Store: Redis
-Auth: JWT, bcrypt
-Storage: Cloudflare R2 (S3-compatible object storage)
-API Style: REST API
-Streaming: HTTP Range Requests
-🏗️ System Architecture
-Client
-  ↓
-Gin REST API
-  ↓
-JWT Auth Middleware + Redis Validation
-  ↓
-Business Logic Layer
-  ↓
-MongoDB (Metadata) + Cloudflare R2 (Video Storage)
-⚙️ How It Works
-User registers and logs in
-Server generates JWT token and stores session in Redis
-Authenticated users upload videos to Cloudflare R2
-Metadata is stored in MongoDB
-Videos are streamed using HTTP Range requests for efficient playback
-Redis validates active sessions for each protected request
-📡 API Endpoints
-Auth
-POST /register   → Create user
-POST /login      → Get JWT token
-Videos
-POST /upload     → Upload video (Protected)
-GET /videos      → List all videos
-GET /stream/:id  → Stream video with range support
-🔐 Security
-Passwords hashed using bcrypt
-JWT authentication for stateless security
-Redis used for session/token validation
-Middleware-based route protection
-☁️ Storage Design
-Videos stored in Cloudflare R2 (S3-compatible)
-Only metadata stored in MongoDB
-Optimized for scalable and low-cost media delivery
-📦 Project Structure
+## 🚀 Features
+
+* **Optimized Streaming:** HTTP Range-based requests for smooth, buffering-free playback and instant seeking.
+* **Cloud Native Storage:** Direct-to-cloud video uploading utilizing Cloudflare R2 (S3-compatible object storage) to keep the app stateless.
+* **Robust Security:** Secure, middleware-protected routes using stateless JWTs paired with a stateful Redis token validation layer (allowing immediate session revocation).
+* **Database Isolation:** Decoupled storage architecture—video files live in R2, while structural user and video metadata live in MongoDB.
+* **High Performance:** Built on Go's concurrent architecture and the Gin framework, optimized for large file handling and low-latency delivery.
+
+---
+
+## 🧰 Tech Stack
+
+| Layer | Technology |
+| :--- | :--- |
+| **Language & Framework** | Go (Golang), Gin Web Framework |
+| **Databases** | MongoDB (Metadata), Redis (Session & Token Cache) |
+| **Storage** | Cloudflare R2 (S3-Compatible Object Storage) |
+| **Authentication** | JSON Web Tokens (JWT), `bcrypt` password hashing |
+| **API Style** | RESTful Architecture |
+| **Streaming Protocol** | HTTP Range Requests |
+
+---
+
+## ⚙️ Core Workflow
+
+1. **Authentication:** User registers or logs in. The server issues a JWT access token and caches the active session identifier in Redis.
+2. **Video Upload:** Authenticated users upload video files via multipart forms. The file stream is piped directly to Cloudflare R2, and a structural metadata record containing the R2 target URL is created in MongoDB.
+3. **Playback & Streaming:** When a client requests a video, the system validates the active session in Redis and processes incoming **HTTP Range Requests**, serving the file back in dynamic byte-chunks instead of loading the entire asset into server memory.
+
+---
+
+## 📡 API Endpoints
+
+### Auth
+* `POST /register` → Create user account (Passwords hashed via `bcrypt`)
+* `POST /login`    → Authenticate user and retrieve JWT token
+
+### Videos
+* `POST /upload`     → Upload video file to Cloudflare R2 **[Protected]**
+* `GET /videos`      → List all available videos and metadata
+* `GET /stream/:id`  → Stream video chunk data with partial content support
+
+---
+
+## 📦 Project Structure
+
+The project follows a clean, decoupled layer-based architecture:
+
+```text
 HakiStream/
-├── config/
-├── controllers/
-├── middleware/
-├── models/
-├── routes/
-├── services/
-├── utils/
-├── main.go
-└── go.mod
-🔥 Future Improvements
-🎬 Video transcoding pipeline (FFmpeg)
-📊 Analytics dashboard (views, watch time)
-🔁 Refresh token system
-🌍 CDN integration for faster streaming
-👥 Role-based access control (Admin/User)
-👨‍💻 Author
-
-Built by Sabyasachee 🚀
-Backend Engineer focused on scalable systems and distributed architecture.
+├── config/       # Database connections (Mongo, Redis) & Env variables
+├── controllers/  # Request parsers and HTTP handlers
+├── middleware/   # JWT verification & Redis session validators
+├── models/       # MongoDB schemas and Data Transfer Objects (DTOs)
+├── routes/       # API router groups mapping endpoints to controllers
+├── services/     # Core business logic (R2 upload clients, streaming chunk calculators)
+├── utils/        # Crypto helpers, token generators, error definitions
+├── main.go       # Application entry point
+└── go.mod        # Dependency management
