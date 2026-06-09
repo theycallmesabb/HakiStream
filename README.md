@@ -63,3 +63,10 @@ HakiStream/
 ├── utils/        # Crypto helpers, token generators, error definitions
 ├── main.go       # Application entry point
 └── go.mod        # Dependency management
+
+
+Built with ⚡ by Sabyasachee
+
+GitHub: @theycallmesabb
+
+Role: Backend Engineer focused on scalable systems, performance tuning, and distributed architecture.
