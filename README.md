@@ -1,4 +1,4 @@
-#  HakiStream
+# 📺 HakiStream
 
 HakiStream is a high-performance, scalable backend video streaming system built with **Go**. It supports efficient video uploading, cloud object storage, and chunked **HTTP range-based streaming**. Designed with production-level architecture, it integrates robust security practices including JWT authentication, Redis-backed session/token management, and Cloudflare R2 storage.
 
