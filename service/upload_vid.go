@@ -1,9 +1,14 @@
 package service
 
 import (
+	"context"
+	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
+	"hakistream.com/config"
 )
 
 func UploadMovie(c *gin.Context) {
@@ -14,14 +19,23 @@ func UploadMovie(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to open file"})
+		return
+	}
+	defer src.Close()
 	ext := filepath.Ext(file.Filename)
 	filename := id + ext
 
-	path := filepath.Join("uploads", filename)
-
-	if err := c.SaveUploadedFile(file, path); err != nil {
-		c.JSON(500, gin.H{"error": "failed to save file"})
+	ctx := context.Background()
+	_, err = config.S3CLIENT.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("R2_BUCKETNAME")),
+		Key:    aws.String(filename),
+		Body:   src,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to upload to R2"})
 		return
 	}
 

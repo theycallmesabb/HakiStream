@@ -17,5 +17,6 @@ func main() {
 	routes.SetupRoutes(r)
 	config.ConnectDb()
 	config.ConnectRedis()
+	config.ConnectR2()
 	r.Run(":8080")
 }
