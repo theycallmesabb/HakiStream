@@ -155,6 +155,7 @@
             font-weight: 500;
         }
         input[type="text"],
+        input[type="email"],
         input[type="password"] {
             width: 100%;
             padding: 0.75rem 1rem;
@@ -413,9 +414,13 @@
                 <div class="tab" onclick="switchTab('register')">Create Account</div>
             </div>
             <form id="auth-form" onsubmit="handleAuth(event)">
-                <div class="form-group">
+                <div class="form-group" id="name-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" required placeholder="Enter your username">
+                    <input type="text" id="username" placeholder="Enter your username">
+                </div>
+                <div class="form-group" id="email-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required placeholder="Enter your Email"/>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
@@ -596,6 +601,8 @@
             document.getElementById('nav-gallery').classList.add('hidden');
             document.getElementById('nav-logout').classList.add('hidden');
             document.getElementById('user-greeting').classList.add('hidden');
+            
+            switchTab(currentMode);
         }
         function switchTab(mode) {
             currentMode = mode;
@@ -603,21 +610,40 @@
             tabs[0].classList.toggle('active', mode === 'login');
             tabs[1].classList.toggle('active', mode === 'register');
             document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+            
+            const nameGroup = document.getElementById('name-group');
+            const usernameInput = document.getElementById('username');
+            if (mode === 'login') {
+                nameGroup.classList.add('hidden');
+                usernameInput.removeAttribute('required');
+            } else {
+                nameGroup.classList.remove('hidden');
+                usernameInput.setAttribute('required', 'required');
+            }
         }
         // Authentication logic
         async function handleAuth(e) {
             e.preventDefault();
             const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const endpoint = currentMode === 'login' ? '/login' : '/register';
             const btn = document.getElementById('auth-submit-btn');
             try {
                 btn.disabled = true;
                 btn.textContent = 'Please wait...';
+                
+                let bodyObj = {};
+                if (currentMode === 'login') {
+                    bodyObj = { email: email, password: password };
+                } else {
+                    bodyObj = { name: username, email: email, password: password };
+                }
+
                 const res = await fetch(`${API_BASE}${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify(bodyObj)
                 });
                 let data = {};
                 try { data = await res.json(); } catch(e) {}
@@ -626,9 +652,9 @@
                     
                     if (data.token) {
                         token = data.token;
-                        currentUsername = username;
+                        currentUsername = currentMode === 'login' ? email : username;
                         localStorage.setItem('token', token);
-                        localStorage.setItem('username', username);
+                        localStorage.setItem('username', currentUsername);
                     } else if (currentMode === 'register') {
                         // Switch to login if register API doesn't auto-login
                         switchTab('login');

@@ -27,6 +27,14 @@ type LoginRequest struct {
 
 func RegisterUser(c *gin.Context) {
 	var reg RegisterRequest
+
+	if strings.Contains(reg.Email, "@") {
+		c.JSON(404, gin.H{
+			"error": "Use a valid mail adress",
+		})
+		return
+	}
+
 	if err := c.ShouldBindJSON(&reg); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
@@ -65,6 +73,7 @@ func RegisterUser(c *gin.Context) {
 	}
 
 	// 4. Insert user
+
 	_, err = config.Db.Collection("users").InsertOne(context.TODO(), user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
