@@ -1,90 +1,73 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
+	"hakistream.com/config"
 )
 
 func ServeFile(c *gin.Context) {
 	id := c.Param("id")
-	basepath := "./uploads"
-	path := filepath.Join(basepath, id)
+	bucket := os.Getenv("R2_BUCKET_NAME")
+	ctx := context.Background()
 
-	if _, err := os.Stat(path); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"err": "The file you are looking for is not found",
-		})
-		return
+	// Prepare S3 GetObject Input
+	input := &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(id),
 	}
 
-	file, err := os.Open(path)
+	// Forward Range header if it exists
+	rangeHeader := c.GetHeader("Range")
+	if rangeHeader != "" {
+		input.Range = aws.String(rangeHeader)
+	}
+
+	output, err := config.S3CLIENT.GetObject(ctx, input)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Not found",
+			"error": "The file you are looking for is not found or inaccessible in R2: " + err.Error(),
 		})
 		return
 	}
-	defer file.Close()
-	fileinfo, err := file.Stat()
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-	filesize := fileinfo.Size()
+	defer output.Body.Close()
 
-	rangeheader := c.GetHeader("Range")
-	if rangeheader == "" {
-		c.File(path)
-		return
+	// Forward response headers from R2 to the client
+	if output.ContentRange != nil {
+		c.Header("Content-Range", *output.ContentRange)
 	}
-	trimmed := strings.TrimPrefix(rangeheader, "bytes=")
-	parts := strings.Split(trimmed, "-")
-	start, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
-		return
+	if output.ContentLength != nil {
+		c.Header("Content-Length", fmt.Sprintf("%d", *output.ContentLength))
+	} else if output.ContentLength != nil {
+		c.Header("Content-Length", fmt.Sprintf("%d", *output.ContentLength))
 	}
-
-	var end int64
-	if parts[1] == "" {
-		end = filesize - 1
-	} else {
-		end, err = strconv.ParseInt(parts[1], 10, 64)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
+	
+	contentType := "video/mp4"
+	if output.ContentType != nil {
+		contentType = *output.ContentType
 	}
-	_, err = file.Seek(start, io.SeekStart)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-	contentrange := fmt.Sprintf("bytes %d-%d/%d", start, end, filesize)
-	c.Header("Content-Range", contentrange)
-	c.Header("Content-Length", fmt.Sprintf("%d", end+1-start))
-	c.Header("Content-Type", "video/mp4")
+	c.Header("Content-Type", contentType)
 	c.Header("Accept-Ranges", "bytes")
-	c.Status(http.StatusPartialContent)
-	log.Println()
-	_, err = io.CopyN(c.Writer, file, end+1-start)
+
+	// Check if this is a partial content response
+	status := http.StatusOK
+	if rangeHeader != "" {
+		status = http.StatusPartialContent
+	}
+	c.Status(status)
+
+	// Stream the video chunks directly to the client
+	_, err = io.Copy(c.Writer, output.Body)
 	if err != nil && err != io.EOF {
+		log.Println("Error streaming from R2:", err)
 		return
 	}
 }

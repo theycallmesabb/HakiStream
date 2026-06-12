@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"os"
-	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -12,12 +13,13 @@ import (
 )
 
 func UploadMovie(c *gin.Context) {
-	id := c.Param("id")
-
-	file, err := c.FormFile("video")
+	file, err := c.FormFile("video") // wait, front-end sends 'file' not 'video'. Let me fix this too.
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
+		file, err = c.FormFile("file")
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 	}
 	src, err := file.Open()
 	if err != nil {
@@ -25,12 +27,12 @@ func UploadMovie(c *gin.Context) {
 		return
 	}
 	defer src.Close()
-	ext := filepath.Ext(file.Filename)
-	filename := id + ext
+	
+	filename := fmt.Sprintf("%d-%s", time.Now().Unix(), file.Filename)
 
 	ctx := context.Background()
 	_, err = config.S3CLIENT.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(os.Getenv("R2_BUCKETNAME")),
+		Bucket: aws.String(os.Getenv("R2_BUCKET_NAME")),
 		Key:    aws.String(filename),
 		Body:   src,
 	})

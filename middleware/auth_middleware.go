@@ -16,11 +16,17 @@ func AuthMiddleware() gin.HandlerFunc {
 		ctx := context.Background()
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authorization empty",
-			})
-			c.Abort()
-			return
+			// Check query param for video streaming
+			tokenQuery := c.Query("token")
+			if tokenQuery != "" {
+				authHeader = "Bearer " + tokenQuery
+			} else {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"error": "Authorization empty",
+				})
+				c.Abort()
+				return
+			}
 		}
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {

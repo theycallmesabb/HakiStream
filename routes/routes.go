@@ -19,6 +19,10 @@ func SetupRoutes(r *gin.Engine) string {
 	r.GET("/ui", func(c *gin.Context) {
 		c.File("./static/index.html")
 	})
+	r.GET("/gallery", func(c *gin.Context) {
+		c.File("./static/gallery.html")
+	})
+
 	//this are the routes which are protected
 	tokenzied.Use(middleware.AuthMiddleware())
 	tokenzied.GET("/ping", func(c *gin.Context) {

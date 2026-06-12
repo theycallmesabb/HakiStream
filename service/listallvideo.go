@@ -1,10 +1,14 @@
 package service
 
 import (
+	"context"
 	"net/http"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
+	"hakistream.com/config"
 )
 
 type Videos struct {
@@ -13,21 +17,25 @@ type Videos struct {
 }
 
 func ListVideos(c *gin.Context) {
-	files, err := os.ReadDir("./uploads")
+	bucket := os.Getenv("R2_BUCKET_NAME")
+	output, err := config.S3CLIENT.ListObjectsV2(context.Background(), &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": err.Error(),
+			"message": "failed to list videos from r2: " + err.Error(),
 		})
 		return
 	}
-	var vid []Videos
-	for _, file := range files {
-		if !file.IsDir() {
-			vid = append(vid, Videos{
-				Video: file.Name(),
-				URL:   "/videos/" + file.Name(),
-			})
-		}
+
+	vid := []Videos{}
+	for _, object := range output.Contents {
+		name := *object.Key
+		vid = append(vid, Videos{
+			Video: name,
+			URL:   "/videos/" + name,
+		})
 	}
+
 	c.JSON(http.StatusOK, vid)
 }
