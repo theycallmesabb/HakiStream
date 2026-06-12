@@ -30,6 +30,7 @@ func SetupRoutes(r *gin.Engine) string {
 			"message": "Server is up",
 		})
 	})
+	tokenzied.GET("/get-upload-url", service.GetUploadURL)
 
 	tokenzied.POST("/uploadmov", service.UploadMovie)
 

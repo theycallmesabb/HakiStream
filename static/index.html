@@ -706,7 +706,7 @@
             videoPlayer.src = "";
             document.getElementById('now-playing-title').textContent = "Select a video to play";
         }
-        // Video Upload
+        // Video Upload via Presigned URL
         async function handleUpload(e) {
             e.preventDefault();
             const fileInput = document.getElementById('video-file');
@@ -716,29 +716,47 @@
                 showToast('Please select a video file first', 'error');
                 return;
             }
-            const formData = new FormData();
-            // Name 'file' is usually standard for gin's FormFile("file")
-            formData.append('file', file);
-            formData.append('video', file);
+            
             const btn = e.target.querySelector('button[type="submit"]');
             
             try {
-                showToast('Uploading your video...', 'success');
+                showToast('Preparing upload...', 'success');
                 btn.disabled = true;
+                btn.textContent = 'Preparing...';
+
+                // 1. Generate a unique filename using timestamp
+                const uniqueFilename = `${Math.floor(Date.now() / 1000)}-${file.name}`;
+                
+                // 2. Fetch the presigned PUT URL from the backend
+                const urlRes = await apiCall(`/get-upload-url?filename=${encodeURIComponent(uniqueFilename)}`);
+                if (!urlRes.ok) {
+                    let errData = {};
+                    try { errData = await urlRes.json(); } catch(e){}
+                    throw new Error(errData.error || 'Failed to get presigned upload URL');
+                }
+                
+                const urlData = await urlRes.json();
+                const uploadUrl = urlData.upload_url;
+                
+                showToast('Uploading directly to cloud storage...', 'success');
                 btn.textContent = 'Uploading...';
-                const res = await apiCall('/uploadmov', {
-                    method: 'POST',
-                    body: formData // Fetch API sets boundary automatically
+                
+                // 3. Direct upload to R2 using the presigned URL
+                const putRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: file,
+                    headers: {
+                        'Content-Type': file.type || 'application/octet-stream'
+                    }
                 });
-                if (res.ok) {
+                
+                if (putRes.ok) {
                     showToast('Video uploaded and processed successfully!');
                     fileInput.value = ''; 
                     document.getElementById('file-name-display').textContent = '';
                     fetchVideos(); 
                 } else {
-                    let data = {};
-                    try { data = await res.json(); } catch(e){}
-                    showToast(data.error || 'Failed to upload video', 'error');
+                    throw new Error(`Cloud upload failed: ${putRes.statusText}`);
                 }
             } catch (err) {
                 showToast(err.message || 'Network error during upload', 'error');
