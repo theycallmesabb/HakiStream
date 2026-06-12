@@ -281,7 +281,9 @@
                 
                 return `
                     <div class="video-card" onclick="openVideo('${safeId}', '${safeName}')">
-                        <div class="video-thumbnail"></div>
+                        <div class="video-thumbnail">
+                            <video src="${API_BASE}/videos/${safeId}?token=${token}#t=1" preload="metadata" muted playsinline style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"></video>
+                        </div>
                         <div class="video-info">
                             <div class="video-title">${displayName}</div>
                         </div>

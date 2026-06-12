@@ -22,6 +22,7 @@ type RegisterRequest struct {
 }
 type LoginRequest struct {
 	Email    string `json:"email"`
+	Name     string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -94,16 +95,23 @@ func LoginUser(c *gin.Context) {
 	// make login and password available
 	if err := c.ShouldBindJSON(&login); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error,
+			"error": "Someerrir in loginpass",
 		})
 		return
 	}
+	//either username or password
 	err := config.Db.Collection("users").FindOne(context.TODO(),
-		bson.M{"email": login.Email}).Decode(&dbUser)
+		bson.M{
+			"$or": []bson.M{
+				{"email": login.Email},
+				{"name": login.Name},
+			},
+		},
+	).Decode(&dbUser)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
+			"error": "Please register",
 		})
 		return
 	}
@@ -111,7 +119,7 @@ func LoginUser(c *gin.Context) {
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(login.Password))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"user": "Unauthorized",
+			"user": "The password is wrong",
 		})
 		return
 	}

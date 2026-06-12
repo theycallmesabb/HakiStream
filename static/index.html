@@ -613,12 +613,23 @@
             
             const nameGroup = document.getElementById('name-group');
             const usernameInput = document.getElementById('username');
+            const emailLabel = document.querySelector('label[for="email"]');
+            const emailInput = document.getElementById('email');
+            
             if (mode === 'login') {
                 nameGroup.classList.add('hidden');
                 usernameInput.removeAttribute('required');
+                
+                emailLabel.textContent = 'Username or Email';
+                emailInput.placeholder = 'Enter your username or email';
+                emailInput.type = 'text'; // Allow raw username or email string
             } else {
                 nameGroup.classList.remove('hidden');
                 usernameInput.setAttribute('required', 'required');
+                
+                emailLabel.textContent = 'Email';
+                emailInput.placeholder = 'Enter your Email';
+                emailInput.type = 'email'; // Enforce valid email syntax for registration
             }
         }
         // Authentication logic
@@ -635,7 +646,7 @@
                 
                 let bodyObj = {};
                 if (currentMode === 'login') {
-                    bodyObj = { email: email, password: password };
+                    bodyObj = { email: email, username: email, password: password };
                 } else {
                     bodyObj = { name: username, email: email, password: password };
                 }
@@ -814,7 +825,9 @@
                 
                 return `
                     <div class="video-card" onclick="navigateToDashboardAndPlay('${safeId}', '${safeName}')">
-                        <div class="video-thumbnail"></div>
+                        <div class="video-thumbnail">
+                            <video src="${API_BASE}/videos/${safeId}?token=${token}#t=1" preload="metadata" muted playsinline style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"></video>
+                        </div>
                         <div class="video-info">
                             <div class="video-card-title">${displayName}</div>
                         </div>
