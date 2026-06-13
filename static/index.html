@@ -737,17 +737,19 @@
                 
                 const urlData = await urlRes.json();
                 const uploadUrl = urlData.upload_url;
+                console.log("Presigned URL:", uploadUrl);
                 
                 showToast('Uploading directly to cloud storage...', 'success');
                 btn.textContent = 'Uploading...';
                 
                 // 3. Direct upload to R2 using the presigned URL
+                // We slice the file to a blob with an empty type to prevent the browser from automatically 
+                // adding a Content-Type header, which would trigger a "SignatureDoesNotMatch" error on R2/S3
+                // since the backend signature calculation did not specify a Content-Type constraint.
+                const fileBlob = file.slice(0, file.size, '');
                 const putRes = await fetch(uploadUrl, {
                     method: 'PUT',
-                    body: file,
-                    headers: {
-                        'Content-Type': file.type || 'application/octet-stream'
-                    }
+                    body: fileBlob
                 });
                 
                 if (putRes.ok) {

@@ -49,7 +49,7 @@ func ServeFile(c *gin.Context) {
 	} else if output.ContentLength != nil {
 		c.Header("Content-Length", fmt.Sprintf("%d", *output.ContentLength))
 	}
-	
+
 	contentType := "video/mp4"
 	if output.ContentType != nil {
 		contentType = *output.ContentType
